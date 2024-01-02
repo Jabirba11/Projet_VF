@@ -23,6 +23,8 @@ Program euler
     Real(PR), Dimension(:,:,:), Allocatable :: Uvect, Uvect_exacte, vect_fluxF, vect_fluxG
     Real(PR), Dimension(:,:,:), Allocatable :: U_g_x,U_d_x,U_minus_x,U_plus_x
     Real(PR), Dimension(:,:,:), Allocatable :: U_g_y,U_d_y,U_minus_y,U_plus_y
+    Real(PR), Dimension(:,:,:), Allocatable :: U_RK1,U_RK2
+
     Real(PR), Dimension(:), Allocatable     :: x, y, xm, ym
     
     ! Loop indices
@@ -81,8 +83,10 @@ Program euler
     Allocate(Uvect(4,imax,jmax), Uvect_exacte(4,imax,jmax), vect_fluxF(4,0:imax, 0:jmax), vect_fluxG(4,0:imax, 0:jmax))
     Allocate(U_g_x(4,0:imax,jmax),U_d_x(4,1:imax+1,jmax))
     Allocate(U_minus_x(4,imax,jmax),U_plus_x(4,imax,jmax))
-    Allocate(U_g_y(4,0:imax,jmax),U_d_y(4,1:imax+1,jmax))
+    Allocate(U_g_y(4,imax,0:jmax),U_d_y(4,imax,1:jmax+1))
     Allocate(U_minus_y(4,imax,jmax),U_plus_y(4,imax,jmax))
+    Allocate(U_RK1(4,imax,jmax),U_RK2(4,imax,jmax))
+
 
     
     ! Compute the grid
@@ -101,10 +105,9 @@ Program euler
 
     
     
-    Do j=1,jmax
-        U_g_x(:,0,j)      = 1._PR
-        U_d_x(:,imax+1,j) = 1._PR
-    End Do
+
+    
+
 
 
 
@@ -119,7 +122,21 @@ Program euler
     time = 0._PR
     Do While (time < time_max)
         Call compute_CFL(Uvect, deltax, deltay, deltat, cfl)
+
         time = MIN( time + deltat, time_max )
+
+        Do j=1,jmax
+            U_g_x(:,0,j)      = 0.00001_PR
+            U_d_x(:,imax+1,j) = 0.00001_PR
+        End Do
+    
+        Do i=1,imax
+            U_g_y(:,i,0)      = 0.00001_PR
+            U_d_y(:,i,jmax+1) = 0.00001_PR
+        End Do
+    
+        
+
 
         Do j=1, jmax
             Do i=1, imax-1
@@ -131,8 +148,8 @@ Program euler
                     U_g_x(:,i,j)    = Uvect(:,i,j)
                     U_d_x(:,i,j)    = Uvect(:,i,j)
                     
-                    U_minus_x(:,i,j) = WeightsL(U_g_x(:,i-1,j),Uvect(:,i,j),Uvect(:,i+1,j))
-                    U_plus_x(:,i,j)  = WeightsR(Uvect(:,i,j),Uvect(:,i+1,j),U_d_x(:,i+2,j))
+                    U_minus_x(:,i,j) = Reconstruction_L(U_g_x(:,i-1,j),Uvect(:,i,j),Uvect(:,i+1,j))
+                    U_plus_x(:,i,j)  = Reconstruction_R(Uvect(:,i,j),Uvect(:,i+1,j),U_d_x(:,i+2,j))
 
                     vect_fluxF(:,i,j) = HLL('x',U_minus_x(:,i,j),U_plus_x(:,i,j),gamma)
 
@@ -165,6 +182,17 @@ Program euler
                 Select Case (TRIM(ADJUSTL(numflux_name)))
                 Case ('Rusanov')
                     vect_fluxG(:,i,j) = Rusanov('y', Uvect(:,i,j), Uvect(:,i,j+1), gamma)
+                Case ('WENO')
+                    U_g_y(:,i,j)    = Uvect(:,i,j)
+                    U_d_y(:,i,j)    = Uvect(:,i,j)
+
+                    U_minus_y(:,i,j) = Reconstruction_L(U_g_y(:,i,j-1),Uvect(:,i,j),Uvect(:,i,j+1))
+                    U_plus_y(:,i,j)  = Reconstruction_R(Uvect(:,i,j),Uvect(:,i,j+1),U_d_y(:,i,j+1))
+
+                    vect_fluxG(:,i,j) = HLL('y',U_minus_y(:,i,j),U_plus_y(:,i,j),gamma)
+
+
+
                 Case Default ! Case ('HLL')
                     vect_fluxG(:,i,j) = HLL('y', Uvect(:,i,j), Uvect(:,i,j+1), gamma)
                 End Select
@@ -175,6 +203,8 @@ Program euler
                 Select Case (TRIM(ADJUSTL(numflux_name)))
                 Case ('Rusanov')
                     vect_fluxG(:,i,0) = Rusanov('y', Uvect(:,i,jmax), Uvect(:,i,1), gamma)
+                Case('WENO')
+                    vect_fluxG(:,i,0) = HLL('y', Uvect(:,i,jmax), Uvect(:,i,1), gamma)
                 Case Default ! Case ('HLL')
                     vect_fluxG(:,i,0) = HLL('y', Uvect(:,i,jmax), Uvect(:,i,1), gamma)
                 End Select
@@ -192,6 +222,7 @@ Program euler
                     & - deltat/deltay * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
             End Do
         End Do
+      
 
         If ( output_modulo > 0 .AND. Modulo(nb_iterations, output_modulo) == 0 ) Then
             Write(STDOUT, *) time, time_max
@@ -204,9 +235,15 @@ Program euler
             Call output(Uvect_exacte, gamma, x, y, nb_iterations / output_modulo + 1, 'exact')
         End If
         nb_iterations = nb_iterations + 1
+
+
+
+        Write(STDOUT, *) "Error:", error('L1', case, Uvect, time, gamma)
+        
+        
     End Do
 
-    Write(STDOUT, *) "Error:", error('L1', case, Uvect, time_max, gamma)
+    ! Write(STDOUT, *) "Error:", error('L1', case, Uvect, time_max, gamma)
 
     Deallocate(x, y, xm, ym)
     Deallocate(Uvect, Uvect_exacte, vect_fluxF, vect_fluxG)
