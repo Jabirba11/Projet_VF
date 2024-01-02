@@ -126,6 +126,88 @@ Contains
     End Function HLL
 
 
+    Function WeightsL(U_left,U_mid,U_right)result(U_minus)
+
+        
+        !Variables d'entrée et de sortie
+        real(PR),dimension(4),Intent(In) :: U_left,U_mid,U_right
+        real(PR),dimension(4)             :: U_minus
+
+        !Variables locales
+        integer  :: j
+        real(PR) :: alpha0,alpha1,W0,W1
+        real(PR) :: epsilon,d0,d1,beta0,beta1
+
+        epsilon = 10e-6
+
+        d0     = 1._PR/3._PR 
+        d1     = 2._PR/3._PR
+        
+
+        Do j=1,4
+
+            beta0 = (U_mid(j)-U_left(j))**2
+            beta1 = (U_right(j)-U_mid(j))**2
+            
+        End Do
+
+        alpha0 = d0/((beta0+epsilon)**2)
+        alpha1 = d1/((beta1+epsilon)**2)
+
+        W0     = alpha0/(alpha0+alpha1)
+        W1     = alpha1/(alpha0+alpha1)
+
+        Do j=1,4
+
+            U_minus(j) = W0*(-0.5_PR*U_left(j) + (3._PR/2._PR)*U_mid(j) ) + W1*(0.5_PR*U_mid(j)+0.5_PR*U_right(j))
+        
+        End Do
+
+
+        End Function WeightsL
+
+        Function WeightsR(U,Ud,Udd)result(U_plus)
+
+        
+            !Variables d'entrée et de sortie
+            real(PR),dimension(4),Intent(In) :: U,Ud,Udd
+            real(PR),dimension(4)            :: U_plus
+    
+            !Variables locales
+            integer  :: j
+            real(PR) :: alpha0,alpha1,W0,W1
+            real(PR) :: epsilon,d0,d1,beta0,beta1
+    
+            epsilon = 10e-6
+    
+            d0     = 2._PR/3._PR 
+            d1     = 1._PR/3._PR
+            
+    
+            Do j=1,4
+    
+                beta0 = (Ud(j)-U(j))**2
+                beta1 = (Udd(j)-Ud(j))**2
+                
+            End Do
+    
+            alpha0 = d0/((beta0+epsilon)**2)
+            alpha1 = d1/((beta1+epsilon)**2)
+    
+            W0     = alpha0/(alpha0+alpha1)
+            W1     = alpha1/(alpha0+alpha1)
+    
+            Do j=1,4
+    
+                U_plus(j) = W0*(0.5_PR*Ud(j) + 0.5_PR*U(j) ) + W1*(-0.5_PR*Udd(j)+(3._PR/2._PR)*Ud(j))
+            
+            End Do
+        
+
+
+    End Function WeightsR
+
+
     ! Fluxes functions
     Function fluxF(Uvect, gamma)
        
