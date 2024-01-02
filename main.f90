@@ -22,6 +22,7 @@ Program euler
     ! Arrays
     Real(PR), Dimension(:,:,:), Allocatable :: Uvect, Uvect_exacte, vect_fluxF, vect_fluxG
     Real(PR), Dimension(:,:,:), Allocatable :: U_g_x,U_d_x,U_minus_x,U_plus_x
+    Real(PR), Dimension(:,:,:), Allocatable :: U_g_y,U_d_y,U_minus_y,U_plus_y
     Real(PR), Dimension(:), Allocatable     :: x, y, xm, ym
     
     ! Loop indices
@@ -80,6 +81,9 @@ Program euler
     Allocate(Uvect(4,imax,jmax), Uvect_exacte(4,imax,jmax), vect_fluxF(4,0:imax, 0:jmax), vect_fluxG(4,0:imax, 0:jmax))
     Allocate(U_g_x(4,0:imax,jmax),U_d_x(4,1:imax+1,jmax))
     Allocate(U_minus_x(4,imax,jmax),U_plus_x(4,imax,jmax))
+    Allocate(U_g_y(4,0:imax,jmax),U_d_y(4,1:imax+1,jmax))
+    Allocate(U_minus_y(4,imax,jmax),U_plus_y(4,imax,jmax))
+
     
     ! Compute the grid
     deltax = (xmax - xmin) / imax
@@ -98,8 +102,8 @@ Program euler
     
     
     Do j=1,jmax
-        U_g_x(:,0,j)      = 10._PR**6
-        U_d_x(:,imax+1,j) = 10._PR**6
+        U_g_x(:,0,j)      = 1._PR
+        U_d_x(:,imax+1,j) = 1._PR
     End Do
 
 
@@ -130,6 +134,8 @@ Program euler
                     U_minus_x(:,i,j) = WeightsL(U_g_x(:,i-1,j),Uvect(:,i,j),Uvect(:,i+1,j))
                     U_plus_x(:,i,j)  = WeightsR(Uvect(:,i,j),Uvect(:,i+1,j),U_d_x(:,i+2,j))
 
+                    vect_fluxF(:,i,j) = HLL('x',U_minus_x(:,i,j),U_plus_x(:,i,j),gamma)
+
 
                 Case Default ! Case ('HLL')
                     vect_fluxF(:,i,j) = HLL('x', Uvect(:,i,j), Uvect(:,i+1,j), gamma)
@@ -142,6 +148,8 @@ Program euler
                 Select Case (TRIM(ADJUSTL(numflux_name)))
                 Case ('Rusanov')
                     vect_fluxF(:,0,j) = Rusanov('x', Uvect(:,imax,j), Uvect(:,1,j), gamma)
+                Case('WENO')
+                    vect_fluxF(:,0,j) = HLL('x', Uvect(:,imax,j), Uvect(:,1,j), gamma)
                 Case Default ! Case ('HLL')
                     vect_fluxF(:,0,j) = HLL('x', Uvect(:,imax,j), Uvect(:,1,j), gamma)
                 End Select
@@ -151,6 +159,7 @@ Program euler
                 vect_fluxF(:,imax,j) = fluxF( Uvect(:,imax,j), gamma )
             End Select
         End Do
+        
         Do i=1, imax
             Do j=1, jmax-1
                 Select Case (TRIM(ADJUSTL(numflux_name)))
@@ -202,6 +211,7 @@ Program euler
     Deallocate(x, y, xm, ym)
     Deallocate(Uvect, Uvect_exacte, vect_fluxF, vect_fluxG)
     Deallocate(U_g_x,U_d_x,U_minus_x,U_plus_x)
+    Deallocate(U_g_y,U_d_y,U_minus_y,U_plus_y)
 
 Contains
     Subroutine compute_CFL(U, dx, dy, dt, cfl)
