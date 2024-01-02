@@ -126,7 +126,7 @@ Contains
     End Function HLL
 
 
-    Function WeightsL(U_left,U_mid,U_right)result(U_minus)
+    Function Reconstruction_L(U_left,U_mid,U_right)result(U_minus)
 
         
         !Variables d'entrée et de sortie
@@ -164,9 +164,9 @@ Contains
         End Do
 
 
-        End Function WeightsL
+        End Function Reconstruction_L
 
-        Function WeightsR(U,Ud,Udd)result(U_plus)
+        Function Reconstruction_R(U,Ud,Udd)result(U_plus)
 
         
             !Variables d'entrée et de sortie
@@ -205,7 +205,7 @@ Contains
         
 
 
-    End Function WeightsR
+    End Function Reconstruction_R
 
 
     ! Fluxes functions
