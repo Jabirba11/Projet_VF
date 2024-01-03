@@ -131,8 +131,8 @@ Program euler
                     U_g_x(:,i,j)    = Uvect(:,i,j)
                     U_d_x(:,i,j)    = Uvect(:,i,j)
                     
-                    U_minus_x(:,i,j) = WeightsL(U_g_x(:,i-1,j),Uvect(:,i,j),Uvect(:,i+1,j))
-                    U_plus_x(:,i,j)  = WeightsR(Uvect(:,i,j),Uvect(:,i+1,j),U_d_x(:,i+2,j))
+                    U_minus_x(:,i,j) = Reconstruction_L(U_g_x(:,i-1,j),Uvect(:,i,j),Uvect(:,i+1,j))
+                    U_plus_x(:,i,j)  = Reconstruction_R(Uvect(:,i,j),Uvect(:,i+1,j),U_d_x(:,i+2,j))
 
                     vect_fluxF(:,i,j) = HLL('x',U_minus_x(:,i,j),U_plus_x(:,i,j),gamma)
 

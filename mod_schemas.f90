@@ -18,27 +18,30 @@ Contains
         Real(PR) :: densR, vitesse_xR, vitesse_yR, energyR, pressionR, qR, aR, maxWaveR1, maxWaveR3
 
         ! Traitement de l'état gauche
-        densL   = UL(1)
-        energyL = UL(4)
-        qL      = .5_PR * ( vitesse_xL**2 + vitesse_yL**2 )
-        aL      = SQRT(gamma * pressionL / densL)
-
+        densL      = UL(1)
         vitesse_xL = UL(2)/densL
         vitesse_yL = UL(3)/densL
+        energyL    = UL(4)
+        
+        qL      = 0.5_PR * ( vitesse_xL**2 + vitesse_yL**2 )
+        aL      = SQRT(gamma * pressionL / densL)
+
+       
         pressionL  = (gamma - 1._PR)*(energyL - densL*qL)
 
 
         ! Traitement de l'état droit
-        densR   = UR(1)
-        energyR = UR(4)
-        qR      = .5_PR * ( vitesse_xR**2 + vitesse_yR**2 )
+        densR      = UR(1)
+        vitesse_xR = UR(2)/densR
+        vitesse_yR = UR(3)/densR
+        energyR    = UR(4)
+        
+        qR      = 0.5_PR * ( vitesse_xR**2 + vitesse_yR**2 )
         aR      = SQRT(gamma * pressionR / densR)
         
         pressionR  = (gamma - 1._PR)*(energyR - densR*qR)
-        vitesse_xR = UR(2)/densR
-        vitesse_yR = UR(3)/densR
-
-        
+ 
+  
         If (direction == 'y')Then
             maxWaveL1 = ABS(vitesse_yL - aL)
             maxWaveR1 = ABS(vitesse_yR - aR)
@@ -52,7 +55,7 @@ Contains
         End If
 
       
-        b = MAX( MAX(maxWaveL1, maxWaveL3),MAX(maxWaveR1, maxWaveR3))
+        b = MAX( MAX(maxWaveL1, maxWaveR1),MAX(maxWaveL3, maxWaveR3))
 
         Select Case (direction)
         Case ('y')
@@ -60,7 +63,8 @@ Contains
         Case Default 
             Rusanov = fluxF(UL, gamma) + fluxF(UR, gamma)
         End Select
-        Rusanov = 0.5_PR * ( Rusanov - b*(UR - UL) )
+        Rusanov = 0.5_PR * Rusanov -  0.5_PR * b *(UR - UL) 
+    
     End Function Rusanov
 
 
@@ -78,35 +82,38 @@ Contains
         Real(PR) :: densR, vitesse_xR, vitesse_yR, energyR, pressionR, qR, aR,b_plus,maxWaveR1, maxWaveR3
 
         ! Traitement de l'état gauche
-        densL = UL(1)
+        densL      = UL(1)
         vitesse_xL = UL(2)/densL
         vitesse_yL = UL(3)/densL
-        energyL = UL(4)
-        qL = 0.5_PR * ( vitesse_xL**2 + vitesse_yL**2 )
+        energyL    = UL(4)
+        
+        
+        qL        = 0.5_PR * ( vitesse_xL**2 + vitesse_yL**2 )
         pressionL = (gamma - 1._PR)*(energyL - densL*qL)
-        aL = SQRT(gamma * pressionL / densL)
+        aL        = SQRT(gamma * pressionL / densL)
 
         
         ! Traitement de l'état droit
-        densR = UR(1)
+        densR      = UR(1)
         vitesse_xR = UR(2)/densR
         vitesse_yR = UR(3)/densR
-        energyR = UR(4)
-        qR = 0.5_PR * ( vitesse_xR**2 + vitesse_yR**2 )
+        energyR    = UR(4)
+        
+        qR        = 0.5_PR * ( vitesse_xR**2 + vitesse_yR**2 )
         pressionR = (gamma - 1._PR)*(energyR - densR*qR)
-        aR = SQRT(gamma * pressionR / densR)
+        aR        = SQRT(gamma * pressionR / densR)
 
         
         If (direction=='y') Then
             maxWaveL1 = vitesse_yL - aL
-            maxWaveL3 = vitesse_yL + aL
             maxWaveR1 = vitesse_yR - aR
+            maxWaveL3 = vitesse_yL + aL
             maxWaveR3 = vitesse_yR + aR
         
         Else
             maxWaveL1 = vitesse_xL - aL
-            maxWaveL3 = vitesse_xL + aL
             maxWaveR1 = vitesse_xR - aR
+            maxWaveL3 = vitesse_xL + aL
             maxWaveR3 = vitesse_xR + aR
         End If
         
@@ -126,7 +133,7 @@ Contains
     End Function HLL
 
 
-    Function WeightsL(U_left,U_mid,U_right)result(U_minus)
+    Function Reconstruction_L(U_left,U_mid,U_right)result(U_minus)
 
         
         !Variables d'entrée et de sortie
@@ -164,9 +171,9 @@ Contains
         End Do
 
 
-        End Function WeightsL
+        End Function Reconstruction_L
 
-        Function WeightsR(U,Ud,Udd)result(U_plus)
+        Function Reconstruction_R(U,Ud,Udd)result(U_plus)
 
         
             !Variables d'entrée et de sortie
@@ -205,7 +212,7 @@ Contains
         
 
 
-    End Function WeightsR
+    End Function Reconstruction_R
 
 
     ! Fluxes functions
