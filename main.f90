@@ -78,7 +78,6 @@ Program euler
     End Do
     Close(111)
     
-    ! Allocate
     Allocate(x(0:imax), y(0:jmax), xm(imax), ym(jmax))
     Allocate(Uvect(4,imax,jmax), Uvect_exacte(4,imax,jmax), vect_fluxF(4,0:imax, 0:jmax), vect_fluxG(4,0:imax, 0:jmax))
     Allocate(U_g_x(4,0:imax,jmax),U_d_x(4,1:imax+1,jmax))
@@ -88,8 +87,6 @@ Program euler
     Allocate(U_RK1(4,imax,jmax),U_RK2(4,imax,jmax))
 
 
-    
-    ! Compute the grid
     deltax = (xmax - xmin) / imax
     deltay = (ymax - ymin) / jmax
     x = (/ Real(PR) :: (xmin + i*deltax, i=0, imax) /)
@@ -209,25 +206,218 @@ Program euler
             End Select
         End Do
 
+        
         Do i=1, imax
             Do j=1, jmax
-                Uvect(:,i,j) = Uvect(:,i,j) &
-                    & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
-                    & - deltat/deltay * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
+                ! Euler Explicite
+                ! Uvect(:,i,j) = Uvect(:,i,j) &
+                !     & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
+                !     & - deltat/deltay * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
                 
                 
-                ! Uvect_1(:,i,j) = Uvect(:,i,j) &
-                ! & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
-                ! & - deltat/deltay * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
-
-                ! Uvect_2(:.i,j) = (3._PR/4._PR)*Uvect(:,i,j)+ (1._PR/4._PR)*Uvect_1(:,i,j) &
-                ! & (1._PR/4._PR)* deltat * 
-
-
-
+                U_RK1(:,i,j) = Uvect(:,i,j) &
+                & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
+                & - deltat/deltay * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
                 
             End Do
         End Do
+        
+        !---------------------Stage 1------------------------
+    
+        
+        Do j=1, jmax
+            Do i=1, imax-1
+                Select Case (TRIM(ADJUSTL(numflux_name)))
+                Case ('Rusanov')
+                    vect_fluxF(:,i,j) = Rusanov('x', U_RK1(:,i,j), U_RK1(:,i+1,j), gamma)
+                Case('WENO')
+
+                    U_g_x(:,i,j)    = U_RK1(:,i,j)
+                    U_d_x(:,i,j)    = U_RK1(:,i,j)
+                    
+                    U_minus_x(:,i,j) = Reconstruction_L(U_g_x(:,i-1,j),U_RK1(:,i,j),U_RK1(:,i+1,j))
+                    U_plus_x(:,i,j)  = Reconstruction_R(U_RK1(:,i,j),U_RK1(:,i+1,j),U_d_x(:,i+2,j))
+
+                    vect_fluxF(:,i,j) = Rusanov('x',U_minus_x(:,i,j),U_plus_x(:,i,j),gamma)
+
+
+                Case Default ! Case ('HLL')
+                    vect_fluxF(:,i,j) = HLL('x', U_RK1(:,i,j), U_RK1(:,i+1,j), gamma)
+                End Select
+            End Do
+            ! Boundary
+            Select Case (case)
+            Case (2) ! Periodic
+                ! Periodic
+                Select Case (TRIM(ADJUSTL(numflux_name)))
+                Case ('Rusanov')
+                    vect_fluxF(:,0,j) = Rusanov('x', U_RK1(:,imax,j), U_RK1(:,1,j), gamma)
+                Case('WENO')
+                    vect_fluxF(:,0,j) = Rusanov('x', U_RK1(:,imax,j), U_RK1(:,1,j), gamma)
+                Case Default ! Case ('HLL')
+                    vect_fluxF(:,0,j) = HLL('x', U_RK1(:,imax,j), U_RK1(:,1,j), gamma)
+                End Select
+                vect_fluxF(:,imax,j) = vect_fluxF(:,0,j)
+            Case Default ! Absorbing
+                vect_fluxF(:,0,j)    = fluxF( U_RK1(:,1,j), gamma )
+                vect_fluxF(:,imax,j) = fluxF( U_RK1(:,imax,j), gamma )
+            End Select
+        End Do
+        
+        Do i=1, imax
+            Do j=1, jmax-1
+                Select Case (TRIM(ADJUSTL(numflux_name)))
+                Case ('Rusanov')
+                    vect_fluxG(:,i,j) = Rusanov('y', U_RK1(:,i,j), U_RK1(:,i,j+1), gamma)
+                Case ('WENO')
+                    U_g_y(:,i,j)    = U_RK1(:,i,j)
+                    U_d_y(:,i,j)    = U_RK1(:,i,j)
+
+                    U_minus_y(:,i,j) = Reconstruction_L(U_g_y(:,i,j-1),U_RK1(:,i,j),U_RK1(:,i,j+1))
+                    U_plus_y(:,i,j)  = Reconstruction_R(U_RK1(:,i,j),U_RK1(:,i,j+1),U_d_y(:,i,j+1))
+
+                    vect_fluxG(:,i,j) = Rusanov('y',U_minus_y(:,i,j),U_plus_y(:,i,j),gamma)
+
+                Case Default ! Case ('HLL')
+                    vect_fluxG(:,i,j) = HLL('y', U_RK1(:,i,j), U_RK1(:,i,j+1), gamma)
+                End Select
+            End Do
+            ! Boundary
+            Select Case (case)
+            Case (2) ! Periodic
+                Select Case (TRIM(ADJUSTL(numflux_name)))
+                Case ('Rusanov')
+                    vect_fluxG(:,i,0) = Rusanov('y', U_RK1(:,i,jmax), U_RK1(:,i,1), gamma)
+                Case('WENO')
+                    vect_fluxG(:,i,0) = Rusanov('y', U_RK1(:,i,jmax), U_RK1(:,i,1), gamma)
+                Case Default ! Case ('HLL')
+                    vect_fluxG(:,i,0) = HLL('y', U_RK1(:,i,jmax), U_RK1(:,i,1), gamma)
+                End Select
+                vect_fluxG(:,i,jmax) = vect_fluxG(:,i,0)
+            Case Default ! Absorbing
+                vect_fluxG(:,i,0)    = fluxG( U_RK1(:,i,0), gamma )
+                vect_fluxG(:,i,jmax) = fluxG( U_RK1(:,i,jmax), gamma )
+            End Select
+        End Do
+
+        !---------------------Stage 1------------------------
+
+
+        !---------------------Stage 2 -------------------------
+
+        Do i=1, imax
+            Do j=1, jmax
+                ! Euler Explicite
+                ! Uvect(:,i,j) = Uvect(:,i,j) &
+                !     & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
+                !     & - deltat/deltay * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
+                
+                
+                U_RK2(:,i,j) = (3._PR/4._PR)*U_RK1(:,i,j) + (1._PR/4._PR)*Uvect(:,i,j) &
+                & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
+                & - deltat/deltay * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
+                
+            End Do
+        End Do
+
+        Do j=1, jmax
+            Do i=1, imax-1
+                Select Case (TRIM(ADJUSTL(numflux_name)))
+                Case ('Rusanov')
+                    vect_fluxF(:,i,j) = Rusanov('x', U_RK2(:,i,j), U_RK2(:,i+1,j), gamma)
+                Case('WENO')
+
+                    U_g_x(:,i,j)    = U_RK2(:,i,j)
+                    U_d_x(:,i,j)    = U_RK2(:,i,j)
+                    
+                    U_minus_x(:,i,j) = Reconstruction_L(U_g_x(:,i-1,j),U_RK2(:,i,j),U_RK2(:,i+1,j))
+                    U_plus_x(:,i,j)  = Reconstruction_R(U_RK2(:,i,j),U_RK2(:,i+1,j),U_d_x(:,i+2,j))
+
+                    vect_fluxF(:,i,j) = Rusanov('x',U_minus_x(:,i,j),U_plus_x(:,i,j),gamma)
+
+
+                Case Default ! Case ('HLL')
+                    vect_fluxF(:,i,j) = HLL('x', U_RK2(:,i,j), U_RK2(:,i+1,j), gamma)
+                End Select
+            End Do
+            ! Boundary
+            Select Case (case)
+            Case (2) ! Periodic
+                ! Periodic
+                Select Case (TRIM(ADJUSTL(numflux_name)))
+                Case ('Rusanov')
+                    vect_fluxF(:,0,j) = Rusanov('x', U_RK2(:,imax,j), U_RK2(:,1,j), gamma)
+                Case('WENO')
+                    vect_fluxF(:,0,j) = Rusanov('x', U_RK2(:,imax,j), U_RK2(:,1,j), gamma)
+                Case Default ! Case ('HLL')
+                    vect_fluxF(:,0,j) = HLL('x', U_RK2(:,imax,j), U_RK2(:,1,j), gamma)
+                End Select
+                vect_fluxF(:,imax,j) = vect_fluxF(:,0,j)
+            Case Default ! Absorbing
+                vect_fluxF(:,0,j)    = fluxF( U_RK2(:,1,j), gamma )
+                vect_fluxF(:,imax,j) = fluxF( U_RK2(:,imax,j), gamma )
+            End Select
+        End Do
+        
+        Do i=1, imax
+            Do j=1, jmax-1
+                Select Case (TRIM(ADJUSTL(numflux_name)))
+                Case ('Rusanov')
+                    vect_fluxG(:,i,j) = Rusanov('y', U_RK2(:,i,j), U_RK2(:,i,j+1), gamma)
+                Case ('WENO')
+                    U_g_y(:,i,j)    = U_RK2(:,i,j)
+                    U_d_y(:,i,j)    = U_RK2(:,i,j)
+
+                    U_minus_y(:,i,j) = Reconstruction_L(U_g_y(:,i,j-1),U_RK2(:,i,j),U_RK2(:,i,j+1))
+                    U_plus_y(:,i,j)  = Reconstruction_R(U_RK2(:,i,j),U_RK2(:,i,j+1),U_d_y(:,i,j+1))
+
+                    vect_fluxG(:,i,j) = Rusanov('y',U_minus_y(:,i,j),U_plus_y(:,i,j),gamma)
+
+                Case Default ! Case ('HLL')
+                    vect_fluxG(:,i,j) = HLL('y', U_RK2(:,i,j), U_RK2(:,i,j+1), gamma)
+                End Select
+            End Do
+            ! Boundary
+            Select Case (case)
+            Case (2) ! Periodic
+                Select Case (TRIM(ADJUSTL(numflux_name)))
+                Case ('Rusanov')
+                    vect_fluxG(:,i,0) = Rusanov('y', U_RK2(:,i,jmax), U_RK2(:,i,1), gamma)
+                Case('WENO')
+                    vect_fluxG(:,i,0) = Rusanov('y', U_RK2(:,i,jmax), U_RK2(:,i,1), gamma)
+                Case Default ! Case ('HLL')
+                    vect_fluxG(:,i,0) = HLL('y', U_RK2(:,i,jmax), U_RK2(:,i,1), gamma)
+                End Select
+                vect_fluxG(:,i,jmax) = vect_fluxG(:,i,0)
+            Case Default ! Absorbing
+                vect_fluxG(:,i,0)    = fluxG( U_RK2(:,i,0), gamma )
+                vect_fluxG(:,i,jmax) = fluxG( U_RK2(:,i,jmax), gamma )
+            End Select
+        End Do
+
+
+
+        !---------------------Stage 2 -------------------------
+
+        Do i=1, imax
+            Do j=1, jmax
+                ! Euler Explicite
+                ! Uvect(:,i,j) = Uvect(:,i,j) &
+                !     & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
+                !     & - deltat/deltay * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
+                
+                
+                Uvect(:,i,j) = (1._PR/3._PR)*Uvect(:,i,j) + (2._PR/3._PR)*U_RK2(:,i,j) &
+                & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
+                & - deltat/deltay * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
+                
+            End Do
+        End Do
+
+
+
+
+        
       
 
         If ( output_modulo > 0 .AND. Modulo(nb_iterations, output_modulo) == 0 ) Then
@@ -253,6 +443,7 @@ Program euler
     Deallocate(Uvect, Uvect_exacte, vect_fluxF, vect_fluxG)
     Deallocate(U_g_x,U_d_x,U_minus_x,U_plus_x)
     Deallocate(U_g_y,U_d_y,U_minus_y,U_plus_y)
+    Deallocate(U_RK1,U_RK2)
 
 Contains
     Subroutine compute_CFL(U, dx, dy, dt, cfl)
@@ -330,5 +521,31 @@ Contains
             End Do
         End Select
     End Function error
+
+    ! Subroutine Time_Scheme(Scheme_name)
+
+    !     Character(len=*), Intent(In) :: Scheme_name
+
+
+    ! End Subroutine Time_Scheme
+
+    ! Subroutine ExplicitEuler(Ures, Uvect, fluxF, fluxG, deltax, deltay, deltat, imax, jmax)
+    !     ! --- InOut
+    !     Real(PR), Dimension(:,:,:), Intent(In) :: Uvect
+    !     Real(PR), Intent(In) :: deltax, deltay, deltat
+    !     Integer, Intent(In) :: imax, jmax
+    !     Real(PR), Dimension(:,0:,0:), Intent(In) :: fluxF, fluxG
+    !     Real(PR), Dimension(:,:,:), Intent(InOut) :: Ures
+    !     ! --- Locals
+    !     Integer :: i, j
+
+    !     Do i=1, imax
+    !         Do j=1, jmax
+    !             Ures(:,i,j) = Uvect(:,i,j) &
+    !                 & - deltat/deltax * (fluxF(:,i,j) - fluxF(:,i-1,j)) &
+    !                 & - deltat/deltay * (fluxG(:,i,j) - fluxG(:,i,j-1))
+    !         End Do
+    !     End Do
+    ! End Subroutine ExplicitEuler
 
 End Program euler
