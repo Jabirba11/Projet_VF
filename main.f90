@@ -96,19 +96,15 @@ Program euler
     y = (/ Real(PR) :: (ymin + j*deltay, j=0, jmax) /)
     xm = (/ Real(PR) :: (xmin + .5_PR*deltax + i*deltax, i=0, imax-1) /)
     ym = (/ Real(PR) :: (ymin + .5_PR*deltay + j*deltay, j=0, jmax-1) /)
-    ! Initialise U
+    
+    
+    !Initialisation de U
+    
     Do i=1, imax
         Do j=1, jmax
             Uvect(:,i,j) = Uinit(xm(i), ym(j), gamma, case)
         End Do
     End Do
-
-    
-    
-
-    
-
-
 
 
     !Call PerformTestsAndExit(gamma)
@@ -126,13 +122,13 @@ Program euler
         time = MIN( time + deltat, time_max )
 
         Do j=1,jmax
-            U_g_x(:,0,j)      = 0.00001_PR
-            U_d_x(:,imax+1,j) = 0.00001_PR
+            U_g_x(:,0,j)      = 1000_PR*j
+            U_d_x(:,imax+1,j) = 1000_PR*j
         End Do
     
         Do i=1,imax
-            U_g_y(:,i,0)      = 0.00001_PR
-            U_d_y(:,i,jmax+1) = 0.00001_PR
+            U_g_y(:,i,0)      = 1000_PR*j
+            U_d_y(:,i,jmax+1) = 1000_PR*j
         End Do
     
         
@@ -151,7 +147,7 @@ Program euler
                     U_minus_x(:,i,j) = Reconstruction_L(U_g_x(:,i-1,j),Uvect(:,i,j),Uvect(:,i+1,j))
                     U_plus_x(:,i,j)  = Reconstruction_R(Uvect(:,i,j),Uvect(:,i+1,j),U_d_x(:,i+2,j))
 
-                    vect_fluxF(:,i,j) = HLL('x',U_minus_x(:,i,j),U_plus_x(:,i,j),gamma)
+                    vect_fluxF(:,i,j) = Rusanov('x',U_minus_x(:,i,j),U_plus_x(:,i,j),gamma)
 
 
                 Case Default ! Case ('HLL')
@@ -166,13 +162,13 @@ Program euler
                 Case ('Rusanov')
                     vect_fluxF(:,0,j) = Rusanov('x', Uvect(:,imax,j), Uvect(:,1,j), gamma)
                 Case('WENO')
-                    vect_fluxF(:,0,j) = HLL('x', Uvect(:,imax,j), Uvect(:,1,j), gamma)
+                    vect_fluxF(:,0,j) = Rusanov('x', Uvect(:,imax,j), Uvect(:,1,j), gamma)
                 Case Default ! Case ('HLL')
                     vect_fluxF(:,0,j) = HLL('x', Uvect(:,imax,j), Uvect(:,1,j), gamma)
                 End Select
                 vect_fluxF(:,imax,j) = vect_fluxF(:,0,j)
             Case Default ! Absorbing
-                vect_fluxF(:,0,j) = fluxF( Uvect(:,1,j), gamma )
+                vect_fluxF(:,0,j)    = fluxF( Uvect(:,1,j), gamma )
                 vect_fluxF(:,imax,j) = fluxF( Uvect(:,imax,j), gamma )
             End Select
         End Do
@@ -189,9 +185,7 @@ Program euler
                     U_minus_y(:,i,j) = Reconstruction_L(U_g_y(:,i,j-1),Uvect(:,i,j),Uvect(:,i,j+1))
                     U_plus_y(:,i,j)  = Reconstruction_R(Uvect(:,i,j),Uvect(:,i,j+1),U_d_y(:,i,j+1))
 
-                    vect_fluxG(:,i,j) = HLL('y',U_minus_y(:,i,j),U_plus_y(:,i,j),gamma)
-
-
+                    vect_fluxG(:,i,j) = Rusanov('y',U_minus_y(:,i,j),U_plus_y(:,i,j),gamma)
 
                 Case Default ! Case ('HLL')
                     vect_fluxG(:,i,j) = HLL('y', Uvect(:,i,j), Uvect(:,i,j+1), gamma)
@@ -204,13 +198,13 @@ Program euler
                 Case ('Rusanov')
                     vect_fluxG(:,i,0) = Rusanov('y', Uvect(:,i,jmax), Uvect(:,i,1), gamma)
                 Case('WENO')
-                    vect_fluxG(:,i,0) = HLL('y', Uvect(:,i,jmax), Uvect(:,i,1), gamma)
+                    vect_fluxG(:,i,0) = Rusanov('y', Uvect(:,i,jmax), Uvect(:,i,1), gamma)
                 Case Default ! Case ('HLL')
                     vect_fluxG(:,i,0) = HLL('y', Uvect(:,i,jmax), Uvect(:,i,1), gamma)
                 End Select
                 vect_fluxG(:,i,jmax) = vect_fluxG(:,i,0)
             Case Default ! Absorbing
-                vect_fluxG(:,i,0) = fluxG( Uvect(:,i,0), gamma )
+                vect_fluxG(:,i,0)    = fluxG( Uvect(:,i,0), gamma )
                 vect_fluxG(:,i,jmax) = fluxG( Uvect(:,i,jmax), gamma )
             End Select
         End Do
@@ -220,6 +214,18 @@ Program euler
                 Uvect(:,i,j) = Uvect(:,i,j) &
                     & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
                     & - deltat/deltay * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
+                
+                
+                ! Uvect_1(:,i,j) = Uvect(:,i,j) &
+                ! & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
+                ! & - deltat/deltay * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
+
+                ! Uvect_2(:.i,j) = (3._PR/4._PR)*Uvect(:,i,j)+ (1._PR/4._PR)*Uvect_1(:,i,j) &
+                ! & (1._PR/4._PR)* deltat * 
+
+
+
+                
             End Do
         End Do
       
@@ -234,16 +240,14 @@ Program euler
             Call output(Uvect, gamma, x, y, nb_iterations / output_modulo + 1, 'sol')
             Call output(Uvect_exacte, gamma, x, y, nb_iterations / output_modulo + 1, 'exact')
         End If
-        nb_iterations = nb_iterations + 1
-
-
-
+        
         Write(STDOUT, *) "Error:", error('L1', case, Uvect, time, gamma)
         
+        nb_iterations = nb_iterations + 1
+
+ 
         
     End Do
-
-    ! Write(STDOUT, *) "Error:", error('L1', case, Uvect, time_max, gamma)
 
     Deallocate(x, y, xm, ym)
     Deallocate(Uvect, Uvect_exacte, vect_fluxF, vect_fluxG)
@@ -263,10 +267,11 @@ Contains
         by_max = 0._PR
         Do i=1, imax
             Do j=1 , jmax
-                rho = U(1,i,j)
+                
+                rho        = U(1,i,j)
                 velocity_u = U(2,i,j) / rho
                 velocity_v = U(3,i,j) / rho
-                e = U(4,i,j)
+                e          = U(4,i,j)
 
                 q = .5_PR * ( velocity_u**2 + velocity_v**2 )
                 p = (gamma - 1._PR)*(e - rho*q)
@@ -276,10 +281,12 @@ Contains
                 l3 = ABS(velocity_u + a)
                 bx = MAX(l1, l3)
                 bx_max = MAX( bx, bx_max)
+                
                 l1 = ABS(velocity_v - a)
                 l3 = ABS(velocity_v + a)
                 by = MAX(l1, l3)
                 by_max = MAX( by, by_max)
+            
             End Do
         End Do
 

@@ -40,6 +40,9 @@ Contains
                 & SQRT(EXP(1._PR)/gamma)*5._PR/(2._PR*PI), &
                 & gamma, &
                 & rho, u, v, p)
+            
+        Case(3)
+            Call LiskaWendroff(x,y,rho,u,v,p,0._PR)
         
             Case Default
             rho = 1._PR
@@ -73,6 +76,8 @@ Contains
                 & SQRT(EXP(1._PR)/gamma)*5._PR/(2._PR*PI), &
                 & gamma, &
                 & rho, u, v, p)
+        Case(3) ! Liska Wendroff p9
+            Call LiskaWendroff(x,y,rho,u,v,p,t)
         Case Default
             Write(STDERR, *) "Pas de solution trouvée dans ce cas (case ", case, ")"
             Call Exit(1)
@@ -121,6 +126,19 @@ Contains
                 vortexDisturbance**2 )**(specificHeatRatio / (specificHeatRatio - 1._PR))
 
     End Subroutine IsentropicVortexCalculation
+
+    Subroutine LiskaWendroff(x,y,density,velocityX,velocityY,pressure,Time)
+
+        Real(PR), Intent(In)  :: x,y,Time
+
+        Real(PR), Intent(Out) :: density,velocityX,velocityY,pressure
+        
+        density    = 1._PR+0.2_PR*sin(PI*(x+y-Time))
+        velocityX  = 1._PR 
+        velocityY  = -0.5_PR
+        pressure   = 1._PR
+    
+    End Subroutine LiskaWendroff
 
 
 

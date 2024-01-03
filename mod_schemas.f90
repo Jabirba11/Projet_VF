@@ -23,11 +23,9 @@ Contains
         vitesse_yL = UL(3)/densL
         energyL    = UL(4)
         
-        qL      = 0.5_PR * ( vitesse_xL**2 + vitesse_yL**2 )
-        aL      = SQRT(gamma * pressionL / densL)
-
-       
+        qL         = 0.5_PR * ( vitesse_xL**2 + vitesse_yL**2 ) 
         pressionL  = (gamma - 1._PR)*(energyL - densL*qL)
+        aL         = SQRT(gamma * pressionL / densL)
 
 
         ! Traitement de l'état droit
@@ -36,10 +34,9 @@ Contains
         vitesse_yR = UR(3)/densR
         energyR    = UR(4)
         
-        qR      = 0.5_PR * ( vitesse_xR**2 + vitesse_yR**2 )
-        aR      = SQRT(gamma * pressionR / densR)
-        
+        qR         = 0.5_PR * ( vitesse_xR**2 + vitesse_yR**2 )     
         pressionR  = (gamma - 1._PR)*(energyR - densR*qR)
+        aR         = SQRT(gamma * pressionR / densR)
  
   
         If (direction == 'y')Then
