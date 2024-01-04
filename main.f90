@@ -138,7 +138,7 @@ Program euler
         Do i=1, imax
             Do j=1, jmax                
                 
-                U_RK1(:,i,j) = Uvect(:,i,j) &
+                Uvect(:,i,j) = Uvect(:,i,j) &
                 & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
                 & - deltat/deltay * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
                 
@@ -146,38 +146,38 @@ Program euler
         End Do
         
         
-        vect_fluxF = Compute_Flux('x',numflux_name,U_RK1,case) 
-        vect_fluxG = Compute_Flux('y',numflux_name,U_RK1,case)
+    !     vect_fluxF = Compute_Flux('x',numflux_name,U_RK1,case) 
+    !     vect_fluxG = Compute_Flux('y',numflux_name,U_RK1,case)
         
         
 
-     !---------------------Stage 2 -------------------------
+    !  !---------------------Stage 2 -------------------------
 
         
-        Do i=1, imax
-            Do j=1, jmax
+    !     Do i=1, imax
+    !         Do j=1, jmax
                           
-                U_RK2(:,i,j) = (3._PR/4._PR)*U_RK1(:,i,j) + (1._PR/4._PR)*Uvect(:,i,j) &
-                & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
-                & - deltat/deltay * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
+    !             U_RK2(:,i,j) = (3._PR/4._PR)*U_RK1(:,i,j) + (1._PR/4._PR)*Uvect(:,i,j) &
+    !             & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
+    !             & - deltat/deltay * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
                 
-            End Do
-        End Do
+    !         End Do
+    !     End Do
 
-        vect_fluxF = Compute_Flux('x',numflux_name,U_RK2,case) 
-        vect_fluxG = Compute_Flux('y',numflux_name,U_RK2,case)
+    !     vect_fluxF = Compute_Flux('x',numflux_name,U_RK2,case) 
+    !     vect_fluxG = Compute_Flux('y',numflux_name,U_RK2,case)
 
   
         
-        Do i=1, imax
-            Do j=1, jmax        
+    !     Do i=1, imax
+    !         Do j=1, jmax        
                 
-                Uvect(:,i,j) = (1._PR/3._PR)*Uvect(:,i,j) + (2._PR/3._PR)*U_RK2(:,i,j) &
-                & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
-                & - deltat/deltay * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
+    !             Uvect(:,i,j) = (1._PR/3._PR)*Uvect(:,i,j) + (2._PR/3._PR)*U_RK2(:,i,j) &
+    !             & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
+    !             & - deltat/deltay * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
                 
-            End Do
-        End Do
+    !         End Do
+    !     End Do
 
 
 
