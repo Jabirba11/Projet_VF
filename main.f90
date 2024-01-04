@@ -129,91 +129,14 @@ Program euler
         End Do
     
         
-
-
-        Do j=1, jmax
-            Do i=1, imax-1
-                Select Case (TRIM(ADJUSTL(numflux_name)))
-                Case ('Rusanov')
-                    vect_fluxF(:,i,j) = Rusanov('x', Uvect(:,i,j), Uvect(:,i+1,j), gamma)
-                Case('WENO')
-
-                    U_g_x(:,i,j)    = Uvect(:,i,j)
-                    U_d_x(:,i,j)    = Uvect(:,i,j)
-                    
-                    U_minus_x(:,i,j) = Reconstruction_L(U_g_x(:,i-1,j),Uvect(:,i,j),Uvect(:,i+1,j))
-                    U_plus_x(:,i,j)  = Reconstruction_R(Uvect(:,i,j),Uvect(:,i+1,j),U_d_x(:,i+2,j))
-
-                    vect_fluxF(:,i,j) = Rusanov('x',U_minus_x(:,i,j),U_plus_x(:,i,j),gamma)
-
-
-                Case Default ! Case ('HLL')
-                    vect_fluxF(:,i,j) = HLL('x', Uvect(:,i,j), Uvect(:,i+1,j), gamma)
-                End Select
-            End Do
-            ! Boundary
-            Select Case (case)
-            Case (2) ! Periodic
-                ! Periodic
-                Select Case (TRIM(ADJUSTL(numflux_name)))
-                Case ('Rusanov')
-                    vect_fluxF(:,0,j) = Rusanov('x', Uvect(:,imax,j), Uvect(:,1,j), gamma)
-                Case('WENO')
-                    vect_fluxF(:,0,j) = Rusanov('x', Uvect(:,imax,j), Uvect(:,1,j), gamma)
-                Case Default ! Case ('HLL')
-                    vect_fluxF(:,0,j) = HLL('x', Uvect(:,imax,j), Uvect(:,1,j), gamma)
-                End Select
-                vect_fluxF(:,imax,j) = vect_fluxF(:,0,j)
-            Case Default ! Absorbing
-                vect_fluxF(:,0,j)    = fluxF( Uvect(:,1,j), gamma )
-                vect_fluxF(:,imax,j) = fluxF( Uvect(:,imax,j), gamma )
-            End Select
-        End Do
-        
-        Do i=1, imax
-            Do j=1, jmax-1
-                Select Case (TRIM(ADJUSTL(numflux_name)))
-                Case ('Rusanov')
-                    vect_fluxG(:,i,j) = Rusanov('y', Uvect(:,i,j), Uvect(:,i,j+1), gamma)
-                Case ('WENO')
-                    U_g_y(:,i,j)    = Uvect(:,i,j)
-                    U_d_y(:,i,j)    = Uvect(:,i,j)
-
-                    U_minus_y(:,i,j) = Reconstruction_L(U_g_y(:,i,j-1),Uvect(:,i,j),Uvect(:,i,j+1))
-                    U_plus_y(:,i,j)  = Reconstruction_R(Uvect(:,i,j),Uvect(:,i,j+1),U_d_y(:,i,j+1))
-
-                    vect_fluxG(:,i,j) = Rusanov('y',U_minus_y(:,i,j),U_plus_y(:,i,j),gamma)
-
-                Case Default ! Case ('HLL')
-                    vect_fluxG(:,i,j) = HLL('y', Uvect(:,i,j), Uvect(:,i,j+1), gamma)
-                End Select
-            End Do
-            ! Boundary
-            Select Case (case)
-            Case (2) ! Periodic
-                Select Case (TRIM(ADJUSTL(numflux_name)))
-                Case ('Rusanov')
-                    vect_fluxG(:,i,0) = Rusanov('y', Uvect(:,i,jmax), Uvect(:,i,1), gamma)
-                Case('WENO')
-                    vect_fluxG(:,i,0) = Rusanov('y', Uvect(:,i,jmax), Uvect(:,i,1), gamma)
-                Case Default ! Case ('HLL')
-                    vect_fluxG(:,i,0) = HLL('y', Uvect(:,i,jmax), Uvect(:,i,1), gamma)
-                End Select
-                vect_fluxG(:,i,jmax) = vect_fluxG(:,i,0)
-            Case Default ! Absorbing
-                vect_fluxG(:,i,0)    = fluxG( Uvect(:,i,0), gamma )
-                vect_fluxG(:,i,jmax) = fluxG( Uvect(:,i,jmax), gamma )
-            End Select
-        End Do
+        vect_fluxF = Compute_Flux('x',numflux_name,Uvect,case) 
+        vect_fluxG = Compute_Flux('y',numflux_name,Uvect,case)
 
         
+        !---------------------Stage 1 -------------------------
+        
         Do i=1, imax
-            Do j=1, jmax
-                ! Euler Explicite
-                ! Uvect(:,i,j) = Uvect(:,i,j) &
-                !     & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
-                !     & - deltat/deltay * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
-                
+            Do j=1, jmax                
                 
                 U_RK1(:,i,j) = Uvect(:,i,j) &
                 & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
@@ -222,97 +145,18 @@ Program euler
             End Do
         End Do
         
-        !---------------------Stage 1------------------------
-    
         
-        Do j=1, jmax
-            Do i=1, imax-1
-                Select Case (TRIM(ADJUSTL(numflux_name)))
-                Case ('Rusanov')
-                    vect_fluxF(:,i,j) = Rusanov('x', U_RK1(:,i,j), U_RK1(:,i+1,j), gamma)
-                Case('WENO')
-
-                    U_g_x(:,i,j)    = U_RK1(:,i,j)
-                    U_d_x(:,i,j)    = U_RK1(:,i,j)
-                    
-                    U_minus_x(:,i,j) = Reconstruction_L(U_g_x(:,i-1,j),U_RK1(:,i,j),U_RK1(:,i+1,j))
-                    U_plus_x(:,i,j)  = Reconstruction_R(U_RK1(:,i,j),U_RK1(:,i+1,j),U_d_x(:,i+2,j))
-
-                    vect_fluxF(:,i,j) = Rusanov('x',U_minus_x(:,i,j),U_plus_x(:,i,j),gamma)
-
-
-                Case Default ! Case ('HLL')
-                    vect_fluxF(:,i,j) = HLL('x', U_RK1(:,i,j), U_RK1(:,i+1,j), gamma)
-                End Select
-            End Do
-            ! Boundary
-            Select Case (case)
-            Case (2) ! Periodic
-                ! Periodic
-                Select Case (TRIM(ADJUSTL(numflux_name)))
-                Case ('Rusanov')
-                    vect_fluxF(:,0,j) = Rusanov('x', U_RK1(:,imax,j), U_RK1(:,1,j), gamma)
-                Case('WENO')
-                    vect_fluxF(:,0,j) = Rusanov('x', U_RK1(:,imax,j), U_RK1(:,1,j), gamma)
-                Case Default ! Case ('HLL')
-                    vect_fluxF(:,0,j) = HLL('x', U_RK1(:,imax,j), U_RK1(:,1,j), gamma)
-                End Select
-                vect_fluxF(:,imax,j) = vect_fluxF(:,0,j)
-            Case Default ! Absorbing
-                vect_fluxF(:,0,j)    = fluxF( U_RK1(:,1,j), gamma )
-                vect_fluxF(:,imax,j) = fluxF( U_RK1(:,imax,j), gamma )
-            End Select
-        End Do
+        vect_fluxF = Compute_Flux('x',numflux_name,U_RK1,case) 
+        vect_fluxG = Compute_Flux('y',numflux_name,U_RK1,case)
         
-        Do i=1, imax
-            Do j=1, jmax-1
-                Select Case (TRIM(ADJUSTL(numflux_name)))
-                Case ('Rusanov')
-                    vect_fluxG(:,i,j) = Rusanov('y', U_RK1(:,i,j), U_RK1(:,i,j+1), gamma)
-                Case ('WENO')
-                    U_g_y(:,i,j)    = U_RK1(:,i,j)
-                    U_d_y(:,i,j)    = U_RK1(:,i,j)
+        
 
-                    U_minus_y(:,i,j) = Reconstruction_L(U_g_y(:,i,j-1),U_RK1(:,i,j),U_RK1(:,i,j+1))
-                    U_plus_y(:,i,j)  = Reconstruction_R(U_RK1(:,i,j),U_RK1(:,i,j+1),U_d_y(:,i,j+1))
+     !---------------------Stage 2 -------------------------
 
-                    vect_fluxG(:,i,j) = Rusanov('y',U_minus_y(:,i,j),U_plus_y(:,i,j),gamma)
-
-                Case Default ! Case ('HLL')
-                    vect_fluxG(:,i,j) = HLL('y', U_RK1(:,i,j), U_RK1(:,i,j+1), gamma)
-                End Select
-            End Do
-            ! Boundary
-            Select Case (case)
-            Case (2) ! Periodic
-                Select Case (TRIM(ADJUSTL(numflux_name)))
-                Case ('Rusanov')
-                    vect_fluxG(:,i,0) = Rusanov('y', U_RK1(:,i,jmax), U_RK1(:,i,1), gamma)
-                Case('WENO')
-                    vect_fluxG(:,i,0) = Rusanov('y', U_RK1(:,i,jmax), U_RK1(:,i,1), gamma)
-                Case Default ! Case ('HLL')
-                    vect_fluxG(:,i,0) = HLL('y', U_RK1(:,i,jmax), U_RK1(:,i,1), gamma)
-                End Select
-                vect_fluxG(:,i,jmax) = vect_fluxG(:,i,0)
-            Case Default ! Absorbing
-                vect_fluxG(:,i,0)    = fluxG( U_RK1(:,i,0), gamma )
-                vect_fluxG(:,i,jmax) = fluxG( U_RK1(:,i,jmax), gamma )
-            End Select
-        End Do
-
-        !---------------------Stage 1------------------------
-
-
-        !---------------------Stage 2 -------------------------
-
+        
         Do i=1, imax
             Do j=1, jmax
-                ! Euler Explicite
-                ! Uvect(:,i,j) = Uvect(:,i,j) &
-                !     & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
-                !     & - deltat/deltay * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
-                
-                
+                          
                 U_RK2(:,i,j) = (3._PR/4._PR)*U_RK1(:,i,j) + (1._PR/4._PR)*Uvect(:,i,j) &
                 & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
                 & - deltat/deltay * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
@@ -320,92 +164,13 @@ Program euler
             End Do
         End Do
 
-        Do j=1, jmax
-            Do i=1, imax-1
-                Select Case (TRIM(ADJUSTL(numflux_name)))
-                Case ('Rusanov')
-                    vect_fluxF(:,i,j) = Rusanov('x', U_RK2(:,i,j), U_RK2(:,i+1,j), gamma)
-                Case('WENO')
+        vect_fluxF = Compute_Flux('x',numflux_name,U_RK2,case) 
+        vect_fluxG = Compute_Flux('y',numflux_name,U_RK2,case)
 
-                    U_g_x(:,i,j)    = U_RK2(:,i,j)
-                    U_d_x(:,i,j)    = U_RK2(:,i,j)
-                    
-                    U_minus_x(:,i,j) = Reconstruction_L(U_g_x(:,i-1,j),U_RK2(:,i,j),U_RK2(:,i+1,j))
-                    U_plus_x(:,i,j)  = Reconstruction_R(U_RK2(:,i,j),U_RK2(:,i+1,j),U_d_x(:,i+2,j))
-
-                    vect_fluxF(:,i,j) = Rusanov('x',U_minus_x(:,i,j),U_plus_x(:,i,j),gamma)
-
-
-                Case Default ! Case ('HLL')
-                    vect_fluxF(:,i,j) = HLL('x', U_RK2(:,i,j), U_RK2(:,i+1,j), gamma)
-                End Select
-            End Do
-            ! Boundary
-            Select Case (case)
-            Case (2) ! Periodic
-                ! Periodic
-                Select Case (TRIM(ADJUSTL(numflux_name)))
-                Case ('Rusanov')
-                    vect_fluxF(:,0,j) = Rusanov('x', U_RK2(:,imax,j), U_RK2(:,1,j), gamma)
-                Case('WENO')
-                    vect_fluxF(:,0,j) = Rusanov('x', U_RK2(:,imax,j), U_RK2(:,1,j), gamma)
-                Case Default ! Case ('HLL')
-                    vect_fluxF(:,0,j) = HLL('x', U_RK2(:,imax,j), U_RK2(:,1,j), gamma)
-                End Select
-                vect_fluxF(:,imax,j) = vect_fluxF(:,0,j)
-            Case Default ! Absorbing
-                vect_fluxF(:,0,j)    = fluxF( U_RK2(:,1,j), gamma )
-                vect_fluxF(:,imax,j) = fluxF( U_RK2(:,imax,j), gamma )
-            End Select
-        End Do
+  
         
         Do i=1, imax
-            Do j=1, jmax-1
-                Select Case (TRIM(ADJUSTL(numflux_name)))
-                Case ('Rusanov')
-                    vect_fluxG(:,i,j) = Rusanov('y', U_RK2(:,i,j), U_RK2(:,i,j+1), gamma)
-                Case ('WENO')
-                    U_g_y(:,i,j)    = U_RK2(:,i,j)
-                    U_d_y(:,i,j)    = U_RK2(:,i,j)
-
-                    U_minus_y(:,i,j) = Reconstruction_L(U_g_y(:,i,j-1),U_RK2(:,i,j),U_RK2(:,i,j+1))
-                    U_plus_y(:,i,j)  = Reconstruction_R(U_RK2(:,i,j),U_RK2(:,i,j+1),U_d_y(:,i,j+1))
-
-                    vect_fluxG(:,i,j) = Rusanov('y',U_minus_y(:,i,j),U_plus_y(:,i,j),gamma)
-
-                Case Default ! Case ('HLL')
-                    vect_fluxG(:,i,j) = HLL('y', U_RK2(:,i,j), U_RK2(:,i,j+1), gamma)
-                End Select
-            End Do
-            ! Boundary
-            Select Case (case)
-            Case (2) ! Periodic
-                Select Case (TRIM(ADJUSTL(numflux_name)))
-                Case ('Rusanov')
-                    vect_fluxG(:,i,0) = Rusanov('y', U_RK2(:,i,jmax), U_RK2(:,i,1), gamma)
-                Case('WENO')
-                    vect_fluxG(:,i,0) = Rusanov('y', U_RK2(:,i,jmax), U_RK2(:,i,1), gamma)
-                Case Default ! Case ('HLL')
-                    vect_fluxG(:,i,0) = HLL('y', U_RK2(:,i,jmax), U_RK2(:,i,1), gamma)
-                End Select
-                vect_fluxG(:,i,jmax) = vect_fluxG(:,i,0)
-            Case Default ! Absorbing
-                vect_fluxG(:,i,0)    = fluxG( U_RK2(:,i,0), gamma )
-                vect_fluxG(:,i,jmax) = fluxG( U_RK2(:,i,jmax), gamma )
-            End Select
-        End Do
-
-
-
-        !---------------------Stage 2 -------------------------
-
-        Do i=1, imax
-            Do j=1, jmax
-                ! Euler Explicite
-                ! Uvect(:,i,j) = Uvect(:,i,j) &
-                !     & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
-                !     & - deltat/deltay * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
-                
+            Do j=1, jmax        
                 
                 Uvect(:,i,j) = (1._PR/3._PR)*Uvect(:,i,j) + (2._PR/3._PR)*U_RK2(:,i,j) &
                 & - deltat/deltax * (vect_fluxF(:,i,j) - vect_fluxF(:,i-1,j)) &
@@ -417,8 +182,6 @@ Program euler
 
 
 
-        
-      
 
         If ( output_modulo > 0 .AND. Modulo(nb_iterations, output_modulo) == 0 ) Then
             Write(STDOUT, *) time, time_max
@@ -521,6 +284,102 @@ Contains
             End Do
         End Select
     End Function error
+
+    Function Compute_Flux (axis,numflux_name,Uvect,case)
+
+        Character(len=1), Intent(In)                :: axis
+        Real(PR), Dimension(4,imax,jmax), Intent(In) :: Uvect
+        Character(len=10), Intent(In)                :: numflux_name
+        Integer, Intent(In)                          :: case
+
+        Real(PR),Dimension(4,0:imax,0:jmax)          :: Compute_Flux 
+
+        Integer                                      :: i,j
+        
+        If (axis=='x') Then
+        
+        Do j=1, jmax
+            Do i=1, imax-1
+                Select Case (TRIM(ADJUSTL(numflux_name)))
+                Case ('Rusanov')
+                    Compute_Flux(:,i,j) = Rusanov('x', Uvect(:,i,j), Uvect(:,i+1,j), gamma)
+                Case('WENO')
+
+                    U_g_x(:,i,j)    = Uvect(:,i,j)
+                    U_d_x(:,i,j)    = Uvect(:,i,j)
+                    
+                    U_minus_x(:,i,j) = Reconstruction_L(U_g_x(:,i-1,j),Uvect(:,i,j),Uvect(:,i+1,j))
+                    U_plus_x(:,i,j)  = Reconstruction_R(Uvect(:,i,j),Uvect(:,i+1,j),U_d_x(:,i+2,j))
+
+                    Compute_Flux(:,i,j) = Rusanov('x',U_minus_x(:,i,j),U_plus_x(:,i,j),gamma)
+
+
+                Case Default ! Case ('HLL')
+                    Compute_Flux(:,i,j) = HLL('x', Uvect(:,i,j), Uvect(:,i+1,j), gamma)
+                End Select
+            End Do
+            ! Boundary
+            Select Case (case)
+            Case (2) ! Periodic
+                ! Periodic
+                Select Case (TRIM(ADJUSTL(numflux_name)))
+                Case ('Rusanov')
+                    Compute_Flux(:,0,j) = Rusanov('x', Uvect(:,imax,j), Uvect(:,1,j), gamma)
+                Case('WENO')
+                    Compute_Flux(:,0,j) = Rusanov('x', Uvect(:,imax,j), Uvect(:,1,j), gamma)
+                Case Default ! Case ('HLL')
+                    Compute_Flux(:,0,j) = HLL('x', Uvect(:,imax,j), Uvect(:,1,j), gamma)
+                End Select
+                Compute_Flux(:,imax,j) = Compute_Flux(:,0,j)
+            Case Default ! Absorbing
+                Compute_Flux(:,0,j)    = fluxF( Uvect(:,1,j), gamma )
+                Compute_Flux(:,imax,j) = fluxF( Uvect(:,imax,j), gamma )
+            End Select
+        End Do
+    
+    Else
+
+        Do i=1, imax
+            Do j=1, jmax-1
+                Select Case (TRIM(ADJUSTL(numflux_name)))
+                Case ('Rusanov')
+                    Compute_Flux(:,i,j) = Rusanov('y', Uvect(:,i,j), Uvect(:,i,j+1), gamma)
+                Case ('WENO')
+                    U_g_y(:,i,j)    = Uvect(:,i,j)
+                    U_d_y(:,i,j)    = Uvect(:,i,j)
+
+                    U_minus_y(:,i,j) = Reconstruction_L(U_g_y(:,i,j-1),Uvect(:,i,j),Uvect(:,i,j+1))
+                    U_plus_y(:,i,j)  = Reconstruction_R(Uvect(:,i,j),Uvect(:,i,j+1),U_d_y(:,i,j+1))
+
+                    Compute_Flux(:,i,j) = Rusanov('y',U_minus_y(:,i,j),U_plus_y(:,i,j),gamma)
+
+                Case Default ! Case ('HLL')
+                    Compute_Flux(:,i,j) = HLL('y', Uvect(:,i,j), Uvect(:,i,j+1), gamma)
+                End Select
+            End Do
+            ! Boundary
+            Select Case (case)
+            Case (2) ! Periodic
+                Select Case (TRIM(ADJUSTL(numflux_name)))
+                Case ('Rusanov')
+                    Compute_Flux(:,i,0) = Rusanov('y', Uvect(:,i,jmax), Uvect(:,i,1), gamma)
+                Case('WENO')
+                    Compute_Flux(:,i,0) = Rusanov('y', Uvect(:,i,jmax), Uvect(:,i,1), gamma)
+                Case Default ! Case ('HLL')
+                    Compute_Flux(:,i,0) = HLL('y', Uvect(:,i,jmax), Uvect(:,i,1), gamma)
+                End Select
+                Compute_Flux(:,i,jmax) = Compute_Flux(:,i,0)
+            Case Default ! Absorbing
+                Compute_Flux(:,i,0)    = fluxG( Uvect(:,i,1), gamma )
+                Compute_Flux(:,i,jmax) = fluxG( Uvect(:,i,jmax), gamma )
+            End Select
+        End Do
+
+
+    End If
+
+
+    End Function Compute_Flux
 
     ! Subroutine Time_Scheme(Scheme_name)
 
