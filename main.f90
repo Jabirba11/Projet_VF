@@ -210,11 +210,11 @@ Program euler
 
 Contains
     Subroutine compute_CFL(U, dx, dy, dt, cfl)
-        ! --- InOut ---
+        
         Real(PR), Dimension(:,:,:), Intent(In) :: U
         Real(PR), Intent(In) :: dx, dy,  cfl
         Real(PR), Intent(Out) :: dt
-        ! --- Locals ---
+    
         Real(PR) :: rho, velocity_u, velocity_v, e, q, p, a, bx, by, bx_max, by_max, l1, l3
 
         bx_max = 0._PR
