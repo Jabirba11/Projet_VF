@@ -153,15 +153,14 @@ Contains
             beta0 = (U_mid(j)-U_left(j))**2
             beta1 = (U_right(j)-U_mid(j))**2
             
-        End Do
 
-        alpha0 = d0/((beta0+epsilon)**2)
-        alpha1 = d1/((beta1+epsilon)**2)
 
-        W0     = alpha0/(alpha0+alpha1)
-        W1     = alpha1/(alpha0+alpha1)
+            alpha0 = d0/((beta0+epsilon)**2)
+            alpha1 = d1/((beta1+epsilon)**2)
 
-        Do j=1,4
+            W0     = alpha0/(alpha0+alpha1)
+            W1     = alpha1/(alpha0+alpha1)
+
 
             U_minus(j) = W0*(-0.5_PR*U_left(j) + (3._PR/2._PR)*U_mid(j) ) + W1*(0.5_PR*U_mid(j)+0.5_PR*U_right(j))
         
@@ -192,21 +191,18 @@ Contains
     
                 beta0 = (Ud(j)-U(j))**2
                 beta1 = (Udd(j)-Ud(j))**2
+
+                alpha0 = d0/((beta0+epsilon)**2)
+                alpha1 = d1/((beta1+epsilon)**2)
+        
+                W0     = alpha0/(alpha0+alpha1)
+                W1     = alpha1/(alpha0+alpha1)
+
+                U_plus(j) = W0*(0.5_PR*Ud(j) + 0.5_PR*U(j) ) + W1*(-0.5_PR*Udd(j)+(3._PR/2._PR)*Ud(j))
+        
                 
             End Do
-    
-            alpha0 = d0/((beta0+epsilon)**2)
-            alpha1 = d1/((beta1+epsilon)**2)
-    
-            W0     = alpha0/(alpha0+alpha1)
-            W1     = alpha1/(alpha0+alpha1)
-    
-            Do j=1,4
-    
-                U_plus(j) = W0*(0.5_PR*Ud(j) + 0.5_PR*U(j) ) + W1*(-0.5_PR*Udd(j)+(3._PR/2._PR)*Ud(j))
-            
-            End Do
-        
+
 
 
     End Function Reconstruction_R

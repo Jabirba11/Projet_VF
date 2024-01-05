@@ -93,6 +93,27 @@ Program euler
     y = (/ Real(PR) :: (ymin + j*deltay, j=0, jmax) /)
     xm = (/ Real(PR) :: (xmin + .5_PR*deltax + i*deltax, i=0, imax-1) /)
     ym = (/ Real(PR) :: (ymin + .5_PR*deltay + j*deltay, j=0, jmax-1) /)
+
+    !          ! DIRICHLET
+!          !F(0,j) = -2._PR*D(xmin, ym(j)) * (T(1, j) - Touest(tn, ym(j))) / deltax
+!          !F(imax,j) = 2._PR*D(xmax, ym(j)) * (T(imax,j) - Test(tn,ym(j))) / deltax
+!          ! NEUMANN
+!          !fluxF(:,imax,j) = (/ Real(PR) :: 0._PR, 0._PR, 0._PR, 0._PR /)
+!         !fluxF(:,0,j) = (/ Real(PR) :: 0._PR, 0._PR, 0._PR, 0._PR /)
+!       End Do
+!       Do i=1, imax
+!          Do j=1, jmax-1
+!             fluxG(:,i,j) = Rusanov(Uvect(:,i,j), Uvect(:,i,j+1), gamma, fluxFuncG)
+!             !fluxG(:,i,j) = HLL(Uvect(:,i,j), Uvect(:,i,j+1), gamma, fluxFuncG)
+!          End Do
+!          ! DIRICHLET
+!          !G(i,0) = -2._PR*D(xm(i), ymin) * ( T(i,1) - Tnord(tn,xm(i)) ) / deltay
+!          !G(i,jmax) = 2._PR*D(xm(i), ymax) * (T(i,jmax) - Tsud(tn,xm(i))) / deltay
+!          ! NEUMANN
+!          !fluxG(:,i,0) = (/ Real(PR) :: 0._PR, 0._PR, 0._PR, 0._PR /)
+!          !fluxG(:,i,jmax) = (/ Real(PR) :: 0._PR, 0._PR, 0._PR, 0._PR /)
+!       End Do
+      
     
     
     !Initialisation de U
@@ -119,13 +140,13 @@ Program euler
         time = MIN( time + deltat, time_max )
 
         Do j=1,jmax
-            U_g_x(:,0,j)      = 1000_PR*j
-            U_d_x(:,imax+1,j) = 1000_PR*j
+            U_g_x(:,0,j)      = (10._PR*j)**10
+            U_d_x(:,imax+1,j) = (10._PR*j)**10
         End Do
     
         Do i=1,imax
-            U_g_y(:,i,0)      = 1000_PR*j
-            U_d_y(:,i,jmax+1) = 1000_PR*j
+            U_g_y(:,i,0)      = (10._PR*j)**10
+            U_d_y(:,i,jmax+1) = (10._PR*j)**10
         End Do
     
         
