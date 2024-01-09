@@ -13,12 +13,12 @@ ERRFILE=error.dat
 EXE="$1"
 
 # Starting point for convergence analysis
-REFNx=50
-REFNy=50
+REFNx=20
+REFNy=20
 REFCFL=0.25
-PWRbasis=1.1
+PWRbasis=2
 # Number of points for the convergence analysis
-NMAX=4
+NMAX=5
 
 # Get the line of each parameter
 NNx=$(cat -n $PARAMS | grep "Nx" | cut -f 1)
@@ -48,11 +48,14 @@ for i in $(seq 1 $NMAX)
 do
     echo -ne "  $i/$NMAX\r"
 
-    Nx=$(echo "$REFNx * $PWRbasis^$i" | bc -l)
+    Nx=$(echo "$REFNx * $PWRbasis*$i" | bc -l)
     Nx=${Nx%.*} #Conversion to an integer
-    Ny=$(echo "$REFNy * $PWRbasis^$i" | bc -l)
+    # Ny=$(echo "$REFNy * $PWRbasis^$i" | bc -l)
+    Ny=$(echo "$REFNy * $PWRbasis*$i" | bc -l)
     Ny=${Ny%.*}
-    CFL=$(echo "$REFCFL / $PWRbasis^$i" | bc -l)
+    # CFL=$(echo "$REFCFL / $PWRbasis^$i" | bc -l)
+    CFL=$(echo "$REFCFL" | bc -l)
+
     OutputMod=-1
 
     dx=$(echo "1./$Nx" | bc -l)

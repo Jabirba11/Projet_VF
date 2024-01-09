@@ -5,7 +5,41 @@ Module mod_schemas
 
 Contains
     
-    Function Rusanov(direction, UL, UR, gamma)
+Function godunov_flux(direction, u, v, gamma) result(h)
+    Character, Intent(In)              :: direction 
+    real(PR), dimension(4), intent(in) :: u, v
+    real(PR), intent(in)               :: gamma
+    real(PR), dimension(4)             :: h
+    real(PR), dimension(4)             :: f_u, f_v
+    integer :: i
+
+    If (direction == 'x') Then
+        do i = 1, 4
+            f_u = fluxF(u, gamma)
+            f_v = fluxF(v, gamma)
+            if (u(i) <= v(i)) then
+                h(i) = min(f_u(i), f_v(i))
+            else
+                h(i) = max(f_u(i), f_v(i))
+            endif
+        end do
+    Else
+        do i = 1, 4
+            f_u = fluxG(u, gamma)
+            f_v = fluxG(v, gamma)
+            if (u(i) <= v(i)) then
+                h(i) = min(f_u(i), f_v(i))
+            else
+                h(i) = max(f_u(i), f_v(i))
+            endif
+        end do
+    End If
+End Function godunov_flux
+   
+    
+
+
+Function Rusanov(direction, UL, UR, gamma)
         
         ! Variables d'entrée et de sortie
         Real(PR), Dimension(4), Intent(In) :: UL, UR
@@ -206,6 +240,114 @@ Contains
 
 
     End Function Reconstruction_R
+
+    Function WENO5_Left(U_left_1,U_left,U_mid,U_right,U_right_1)
+
+        
+        !Variables d'entrée et de sortie
+        real(PR),dimension(3),Intent(In) :: U_left,U_mid,U_right,U_left_1,U_right_1
+        real(PR),dimension(3)            :: WENO5_Left
+        
+
+        !Variables locales
+        integer  :: j
+        real(PR) :: alpha0,alpha1,W0,W1,W2,alpha2
+        real(PR) :: epsilon,d0,d1,d2,beta0,beta1,beta2
+
+        epsilon = 10e-6
+
+        d0     = 1._PR/10._PR 
+        d1     = 3._PR/5._PR
+        d2     = 3._PR/10._PR
+        
+
+        Do j=1,3
+
+            beta0 = (13._PR/12._PR)*((U_left_1(j)-2._PR*U_left(j)+U_mid(j))**2) &
+            & + ((U_left_1(j)-4._PR*U_left(j)+3._PR*U_mid(j))**2)/4._PR
+            
+            beta1 = (13._PR/12._PR)*((U_left(j)-2._PR*U_mid(j)+U_right(j))**2) &
+            & + ((U_left(j)-U_right(j))**2)/4._PR 
+            
+            beta2 = (13._PR/12._PR)*((U_mid(j)-2._PR*U_right(j)+U_right_1(j))**2) &
+            & + ((3._PR*U_mid(j)-4._PR*U_right(j)+U_right_1(j))**2)/4._PR
+
+            alpha0 = d0/((beta0+epsilon)**2)
+            alpha1 = d1/((beta1+epsilon)**2)
+            alpha2 = d2/((beta2+epsilon)**2)
+
+    
+            W0     = alpha0/(alpha0+alpha1+alpha2)
+            W1     = alpha1/(alpha0+alpha1+alpha2)
+            W2     = alpha2/(alpha0+alpha1+alpha2)
+
+
+            WENO5_Left(j) = W0*(U_left_1(j)/3._PR - (7._PR/6._PR)*U_left(j)+(11._PR/6._PR)*U_mid(j)) +&
+            & W1*((-1._PR/6._PR)*U_left(j)+(5._PR/6._PR)*U_mid(j)+(1._PR/3._PR)*U_right(j)) +&
+            & W2*((1._PR/3._PR)*U_mid(j)+(5._PR/6._PR)*U_right(j)-(1._PR/6._PR)*U_right_1(j))
+
+            
+        End Do
+
+
+    End Function WENO5_Left
+
+    Function WENO5_Right(U_left_1,U_left,U_mid,U_right,U_right_1)
+
+    
+        !Variables d'entrée et de sortie
+        real(PR),dimension(3),Intent(In) :: U_left,U_mid,U_right,U_left_1,U_right_1
+        real(PR),dimension(3)            :: WENO5_Right
+        
+
+        !Variables locales
+        integer  :: j
+        real(PR) :: alpha0,alpha1,W0,W1,W2,alpha2
+        real(PR) :: epsilon,d0,d1,d2,beta0,beta1,beta2
+
+        epsilon = 10e-6  
+
+        d0     = 3._PR/10._PR 
+        d1     = 3._PR/5._PR
+        d2     = 1._PR/10._PR
+        
+
+        Do j=1,3
+
+            beta0 = (13._PR/12._PR)*((U_left_1(j)-2._PR*U_left(j)+U_mid(j))**2) &
+            & + ((U_left_1(j)-4._PR*U_left(j)+3._PR*U_mid(j))**2)/4._PR
+            
+            beta1 = (13._PR/12._PR)*((U_left(j)-2._PR*U_mid(j)+U_right(j))**2) &
+            & + ((U_left(j)-U_right(j))**2)/4._PR 
+            
+            beta2 = (13._PR/12._PR)*((U_mid(j)-2._PR*U_right(j)+U_right_1(j))**2) &
+            & + ((3._PR*U_mid(j)-4._PR*U_right(j)+U_right_1(j))**2)/4._PR
+
+            alpha0 = d0/((beta0+epsilon)**2)
+            alpha1 = d1/((beta1+epsilon)**2)
+            alpha2 = d2/((beta2+epsilon)**2)
+
+    
+            W0     = alpha0/(alpha0+alpha1+alpha2)
+            W1     = alpha1/(alpha0+alpha1+alpha2)
+            W2     = alpha2/(alpha0+alpha1+alpha2)
+
+
+            WENO5_Right(j) = W0*(U_mid(j)/3._PR + (5._PR/6._PR)*U_left(j)+(-1._PR/6._PR)*U_left_1(j)) +&
+            & W1*((-1._PR/6._PR)*U_right(j)+(5._PR/6._PR)*U_mid(j)+(1._PR/3._PR)*U_left(j)) +&
+            & W2*((1._PR/3._PR)*U_right_1(j)+(-7._PR/6._PR)*U_right(j)+(11._PR/6._PR)*U_mid(j))
+
+            
+        End Do
+
+
+
+
+
+    End Function WENO5_Right
+
+
+
 
 
     ! Fluxes functions
