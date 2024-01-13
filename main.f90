@@ -8,6 +8,51 @@ Program euler
 
     Character(14), Parameter :: parameters = "parameters.dat"
 
+
+! Case ('IsentropicVortex')
+!     ! Periodic
+!     Select Case (axis)
+!     Case ('x')
+!         If (i == 0 .OR. i == imax) Then
+!             ULL = Uvect(:,imax-1,j)
+!             UL = Uvect(:,imax,j)
+!             UR = Uvect(:,1,j)
+!             URR = Uvect(:,2,j)
+!         Else If (i == 1) Then
+!             ULL = Uvect(:,imax,j)
+!             UL = Uvect(:,1,j)
+!             UR = Uvect(:,2,j)
+!             URR = Uvect(:,3,j)
+!         Else If (i == imax-1) Then
+!             ULL = Uvect(:,imax-2,j)
+!             UL = Uvect(:,imax-1,j)
+!             UR = Uvect(:,imax,j)
+!             URR = Uvect(:,1,j)
+!         Else
+!             Write(STDERR, *) "Invalid index for boundary condition ", i
+!             Call Exit(1)
+!         End If
+!     Case ('y')
+!         If (j == 0 .OR. j == jmax) Then
+!             ULL = Uvect(:,i,jmax-1)
+!             UL = Uvect(:,i,jmax)
+!             UR = Uvect(:,i,1)
+!             URR = Uvect(:,i,2)
+!         Else If (j == 1) Then
+!             ULL = Uvect(:,i,jmax)
+!             UL = Uvect(:,i,1)
+!             UR = Uvect(:,i,2)
+!             URR = Uvect(:,i,3)
+!         Else If (j == jmax-1) Then
+!             ULL = Uvect(:,i,jmax-2)
+!             UL = Uvect(:,i,jmax-1)
+!             UR = Uvect(:,i,jmax)
+!             URR = Uvect(:,i,1)
+!         Else
+!             Write(STDERR, *) "Invalid index for boundary condition ", j
+!             Call Exit(1)
+!         End If
+
     ! Parametres
     Real(PR)          :: xmin, xmax, ymin, ymax, time_max, cfl, gamma
     Integer           :: imax, jmax, output_modulo, case
@@ -23,9 +68,15 @@ Program euler
     Real(PR), Dimension(:,:,:), Allocatable :: Uvect, Uvect_exacte, vect_fluxF, vect_fluxG
     Real(PR), Dimension(:,:,:), Allocatable :: U_g_x,U_d_x,U_minus_x,U_plus_x
     Real(PR), Dimension(:,:,:), Allocatable :: U_g_y,U_d_y,U_minus_y,U_plus_y
-    Real(PR), Dimension(:,:,:), Allocatable :: U_RK1,U_RK2
+    Real(PR), Dimension(:,:,:), Allocatable :: U_RK1,U_RK2,U_bounds_i1,U_bounds_i2,U_bounds_j1,U_bounds_j2
+    Real(PR), Dimension(:,:,:), Allocatable :: U_bounds_k1,U_bounds_k2,U_bounds_l1,U_bounds_l2
 
     Real(PR), Dimension(:), Allocatable     :: x, y, xm, ym
+    
+
+
+
+
     
     ! Loop indices
     Integer  :: i, j, nb_iterations
@@ -85,6 +136,10 @@ Program euler
     Allocate(U_g_y(4,imax,0:jmax),U_d_y(4,imax,1:jmax+1))
     Allocate(U_minus_y(4,imax,jmax),U_plus_y(4,imax,jmax))
     Allocate(U_RK1(4,imax,jmax),U_RK2(4,imax,jmax))
+    Allocate(U_bounds_i1(4,imax,jmax),U_bounds_i2(4,imax,jmax))
+    Allocate(U_bounds_j1(4,imax,jmax),U_bounds_j2(4,imax,jmax))
+    Allocate(U_bounds_k1(4,imax,jmax),U_bounds_k2(4,imax,jmax))
+    Allocate(U_bounds_l1(4,imax,jmax),U_bounds_l2(4,imax,jmax))
 
 
     deltax = (xmax - xmin) / imax
@@ -128,8 +183,8 @@ Program euler
     !Call PerformTestsAndExit(gamma)
 
     ! Output initial state
-    Call output(Uvect, gamma, x, y, 0, 'sol')
-    Call output(Uvect, gamma, x, y, 0, 'exact')
+    ! Call output(Uvect, gamma, x, y, 0, 'sol')
+    ! Call output(Uvect, gamma, x, y, 0, 'exact')
 
     ! Time loop
     nb_iterations = 0
@@ -140,13 +195,13 @@ Program euler
         time = MIN( time + deltat, time_max )
 
         Do j=1,jmax
-            U_g_x(:,0,j)      = (10._PR*j)**10
-            U_d_x(:,imax+1,j) = (10._PR*j)**10
+            U_g_x(:,0,j)      = Uvect(:,imax,j)!(10._PR*j)**10
+            U_d_x(:,imax+1,j) = Uvect(:,1,j)!(10._PR*j)**10
         End Do
     
         Do i=1,imax
-            U_g_y(:,i,0)      = (10._PR*j)**10
-            U_d_y(:,i,jmax+1) = (10._PR*j)**10
+            U_g_y(:,i,0)      = Uvect(:,i,jmax)!(10._PR*j)**10
+            U_d_y(:,i,jmax+1) = Uvect(:,i,1)!(10._PR*j)**10
         End Do
     
         
@@ -167,6 +222,17 @@ Program euler
         End Do
         
         
+        Do j=1,jmax
+            U_g_x(:,0,j)      = U_RK1(:,imax,j)!(10._PR*j)**10
+            U_d_x(:,imax+1,j) = U_RK1(:,1,j)!(10._PR*j)**10
+        End Do
+    
+        Do i=1,imax
+            U_g_y(:,i,0)      = U_RK1(:,i,jmax)!(10._PR*j)**10
+            U_d_y(:,i,jmax+1) = U_RK1(:,i,1)!(10._PR*j)**10
+        End Do
+
+        
         vect_fluxF = Compute_Flux('x',numflux_name,U_RK1,case) 
         vect_fluxG = Compute_Flux('y',numflux_name,U_RK1,case)
         
@@ -183,6 +249,17 @@ Program euler
                 & - (1._PR*deltat)/(4._PR*deltay) * (vect_fluxG(:,i,j) - vect_fluxG(:,i,j-1))
                 
             End Do
+        End Do
+
+
+        Do j=1,jmax
+            U_g_x(:,0,j)      = U_RK2(:,imax,j)!(10._PR*j)**10
+            U_d_x(:,imax+1,j) = U_RK2(:,1,j)!(10._PR*j)**10
+        End Do
+    
+        Do i=1,imax
+            U_g_y(:,i,0)      = U_RK2(:,i,jmax)!(10._PR*j)**10
+            U_d_y(:,i,jmax+1) = U_RK2(:,i,1)!(10._PR*j)**10
         End Do
 
         vect_fluxF = Compute_Flux('x',numflux_name,U_RK2,case) 
@@ -211,11 +288,11 @@ Program euler
                     Uvect_exacte(:,i,j) = Uexact(case, xm(i), ym(j), time, gamma)
                 End Do
             End Do
-            Call output(Uvect, gamma, x, y, nb_iterations / output_modulo + 1, 'sol')
-            Call output(Uvect_exacte, gamma, x, y, nb_iterations / output_modulo + 1, 'exact')
+            ! Call output(Uvect, gamma, x, y, nb_iterations / output_modulo + 1, 'sol')
+            ! Call output(Uvect_exacte, gamma, x, y, nb_iterations / output_modulo + 1, 'exact')
         End If
         
-        Write(STDOUT, *) "Error:", error('L1', case, Uvect, time, gamma)
+        
         
         nb_iterations = nb_iterations + 1
 
@@ -223,11 +300,14 @@ Program euler
         
     End Do
 
+    Write(STDOUT, *) "Error:", error('L1', case, Uvect, time, gamma) 
+
     Deallocate(x, y, xm, ym)
     Deallocate(Uvect, Uvect_exacte, vect_fluxF, vect_fluxG)
     Deallocate(U_g_x,U_d_x,U_minus_x,U_plus_x)
     Deallocate(U_g_y,U_d_y,U_minus_y,U_plus_y)
     Deallocate(U_RK1,U_RK2)
+    Deallocate(U_bounds_i1,U_bounds_i2,U_bounds_j1,U_bounds_j2)
 
 Contains
     Subroutine compute_CFL(U, dx, dy, dt, cfl)
@@ -237,6 +317,7 @@ Contains
         Real(PR), Intent(Out) :: dt
     
         Real(PR) :: rho, velocity_u, velocity_v, e, q, p, a, bx, by, bx_max, by_max, l1, l3
+        Integer  :: i,j
 
         bx_max = 0._PR
         by_max = 0._PR
@@ -277,8 +358,11 @@ Contains
         Real(PR), Dimension(4) :: error
         ! --- Locals
         Real(PR), Dimension(4) :: exact_value
+        Integer                :: i,j,k
+        ! Real(PR)               :: error
 
         error = 0._PR
+        ! sum_error = 0._PR
         Select Case (norm)
         Case ('L1') ! L1 norm
             Do i=1, imax
@@ -288,21 +372,41 @@ Contains
                 End Do
             End Do
             error = error / ( imax * jmax )
+
+            
+            ! Do k=1,4
+            !     sum_error = sum_error + error(k)
+            ! End Do
+
+            error = (error/4)
+
         Case ('L2') ! L2 norm
-            Do i=10, imax-10
-                Do j=10 , jmax-10
+            Do i=1, imax
+                Do j=1 , jmax-1
                     exact_value = Uexact(case, xm(i), ym(j), time, gamma)
                     error = error + ( U(:,i,j) - exact_value )**2
                 End Do
             End Do
             error = SQRT( error / ( imax * jmax ) )
+
+            Do k=1,4
+                error = error + error(k)
+            End Do
+
+            error = (error/4)
         Case Default ! L_infinity norm
-            Do i=10, imax-10
-                Do j=10 , jmax-10
+            Do i=1, imax
+                Do j=1 , jmax
                     exact_value = Uexact(case, xm(i), ym(j), time, gamma)
                     error = MAX( error, ABS( U(:,i,j) - exact_value ) )
                 End Do
             End Do
+
+            Do k=1,4
+                error = error + error(k)
+            End Do
+
+            error = (error/4)
         End Select
     End Function error
 
@@ -332,7 +436,7 @@ Contains
                     U_minus_x(:,i,j) = Reconstruction_L(U_g_x(:,i-1,j),Uvect(:,i,j),Uvect(:,i+1,j))
                     U_plus_x(:,i,j)  = Reconstruction_R(Uvect(:,i,j),Uvect(:,i+1,j),U_d_x(:,i+2,j))
 
-                    Compute_Flux(:,i,j) = godunov_flux('x',U_minus_x(:,i,j),U_plus_x(:,i,j),gamma)
+                    Compute_Flux(:,i,j) = Rusanov('x',U_minus_x(:,i,j),U_plus_x(:,i,j),gamma)
                 Case('Gudonov') 
                     Compute_Flux(:,i,j) = godunov_flux('x', Uvect(:,i,j), Uvect(:,i+1,j), gamma)
 
@@ -345,16 +449,26 @@ Contains
             Case (2) ! Periodic
                 ! Periodic
                 Select Case (TRIM(ADJUSTL(numflux_name)))
-                Case ('Rusanov')
+                Case ('Rusanov')    
+                    
                     Compute_Flux(:,0,j) = Rusanov('x', Uvect(:,imax,j), Uvect(:,1,j), gamma)
                 Case('WENO3')
-                    Compute_Flux(:,0,j) = godunov_flux('x', Uvect(:,imax,j), Uvect(:,1,j), gamma)
+
+                    U_bounds_i1(:,1,j) = Reconstruction_L(Uvect(:,imax,j),Uvect(:,1,j),Uvect(:,2,j))
+                    U_bounds_i2(:,1,j) = Reconstruction_R(Uvect(:,1,j),Uvect(:,2,j),Uvect(:,3,j))
+                    Compute_Flux(:,0,j) = Rusanov('x', U_bounds_i1(:,1,j), U_bounds_i2(:,1,j), gamma)
+
+                    U_bounds_k1(:,imax,j) = Reconstruction_L(Uvect(:,imax-1,j),Uvect(:,imax,j),Uvect(:,1,j))
+                    U_bounds_k2(:,imax,j) = Reconstruction_R(Uvect(:,imax,j),Uvect(:,1,j),Uvect(:,2,j))
+                    Compute_Flux(:,imax,j) = Rusanov('x', U_bounds_k1(:,imax,j), U_bounds_k2(:,imax,j), gamma)
+
+
                 Case('Gudonov')
                     Compute_Flux(:,0,j) = godunov_flux('x', Uvect(:,imax,j), Uvect(:,1,j), gamma)
                 Case Default ! Case ('HLL')
                     Compute_Flux(:,0,j) = HLL('x', Uvect(:,imax,j), Uvect(:,1,j), gamma)
                 End Select
-                Compute_Flux(:,imax,j) = Compute_Flux(:,0,j)
+                ! Compute_Flux(:,imax,j) = Compute_Flux(:,0,j)
             Case Default ! Absorbing
                 Compute_Flux(:,0,j)    = fluxF( Uvect(:,1,j), gamma )
                 Compute_Flux(:,imax,j) = fluxF( Uvect(:,imax,j), gamma )
@@ -375,7 +489,7 @@ Contains
                     U_minus_y(:,i,j) = Reconstruction_L(U_g_y(:,i,j-1),Uvect(:,i,j),Uvect(:,i,j+1))
                     U_plus_y(:,i,j)  = Reconstruction_R(Uvect(:,i,j),Uvect(:,i,j+1),U_d_y(:,i,j+1))
 
-                    Compute_Flux(:,i,j) = godunov_flux('y',U_minus_y(:,i,j),U_plus_y(:,i,j),gamma)
+                    Compute_Flux(:,i,j) = Rusanov('y',U_minus_y(:,i,j),U_plus_y(:,i,j),gamma)
                 Case('Gudonov')
                     Compute_Flux(:,i,j) = godunov_flux('y', Uvect(:,i,j), Uvect(:,i,j+1), gamma)
 
@@ -390,13 +504,23 @@ Contains
                 Case ('Rusanov')
                     Compute_Flux(:,i,0) = Rusanov('y', Uvect(:,i,jmax), Uvect(:,i,1), gamma)
                 Case('WENO3')
-                    Compute_Flux(:,i,0) = godunov_flux('y', Uvect(:,i,jmax), Uvect(:,i,1), gamma)
+
+                    U_bounds_j1(:,i,1) = Reconstruction_L(Uvect(:,i,jmax),Uvect(:,i,1),Uvect(:,i,2))
+                    U_bounds_j2(:,i,1) = Reconstruction_R(Uvect(:,i,1),Uvect(:,i,2),Uvect(:,i,3))
+                    Compute_Flux(:,i,0) = Rusanov('y', U_bounds_j1(:,i,1), U_bounds_j2(:,i,1), gamma)
+
+                    U_bounds_l1(:,i,jmax) = Reconstruction_L(Uvect(:,i,jmax-1),Uvect(:,i,jmax),Uvect(:,i,1))
+                    U_bounds_l2(:,i,jmax) = Reconstruction_R(Uvect(:,i,jmax),Uvect(:,i,1),Uvect(:,i,2))
+                    Compute_Flux(:,i,jmax) = Rusanov('y', U_bounds_l1(:,i,jmax), U_bounds_l2(:,i,jmax), gamma)
+                    
+                    
+    
                 Case('Gudonov')
                     Compute_Flux(:,i,0) = godunov_flux('y', Uvect(:,i,jmax), Uvect(:,i,1), gamma)
                 Case Default ! Case ('HLL')
                     Compute_Flux(:,i,0) = HLL('y', Uvect(:,i,jmax), Uvect(:,i,1), gamma)
                 End Select
-                Compute_Flux(:,i,jmax) = Compute_Flux(:,i,0)
+                !Compute_Flux(:,i,jmax) = Compute_Flux(:,i,0)
             Case Default ! Absorbing
                 Compute_Flux(:,i,0)    = fluxG( Uvect(:,i,1), gamma )
                 Compute_Flux(:,i,jmax) = fluxG( Uvect(:,i,jmax), gamma )

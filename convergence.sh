@@ -13,12 +13,12 @@ ERRFILE=error.dat
 EXE="$1"
 
 # Starting point for convergence analysis
-REFNx=20
-REFNy=20
-REFCFL=0.25
+REFNx=500
+REFNy=500
+REFCFL=1.
 PWRbasis=2
 # Number of points for the convergence analysis
-NMAX=5
+NMAX=3
 
 # Get the line of each parameter
 NNx=$(cat -n $PARAMS | grep "Nx" | cut -f 1)
