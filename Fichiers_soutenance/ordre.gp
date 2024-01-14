@@ -6,7 +6,7 @@ set key right bottom
 set xlabel "delta_x" font ",12"
 set ylabel "Erreur" font ",12"
 
-ERRFILE = "WENO3_500x3.dat"
+ERRFILE = "WENO_HLL_error_500x3_0.9.dat"
 
 set logscale xy
 set format x "%2.0t.10^{%L}"

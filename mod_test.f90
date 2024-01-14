@@ -5,23 +5,23 @@ Module mod_test
     Implicit None
 
 Contains
-    Subroutine PerformTestsAndExit(gamma)
+    Subroutine PerformTest(gamma)
         Real(PR), Intent(In) :: gamma
       
-        Write(*,*) '=== Consistence des flux ==='
-        Write(*,*) "-- Rusanov"
-        Call testNumericalFlux(Rusanov, gamma, fluxF, fluxG)
-        Write(*,*) " -> SUCCESS" 
+        Write(*,*) '-- Consistence des flux --'
+        Write(*,*) "- Rusanov"
+        Call testFluxnum(Rusanov, gamma, fluxF, fluxG)
+        Write(*,*) "- Reussi" 
 
-        Write(*,*) "-- HLL"
-        Call testNumericalFlux(HLL, gamma, fluxF, fluxG)
-        Write(*,*) " -> SUCCESS"
+        Write(*,*) "- HLL"
+        Call testFluxnum(HLL, gamma, fluxF, fluxG)
+        Write(*,*) " - Reussi"
 
         Call Exit()
     
-    End Subroutine PerformTestsAndExit
+    End Subroutine PerformTest
 
-    Function randomU(gamma)
+    Function random_U(gamma)
         Real(PR), Parameter :: eps = EPSILON(Real(PR))
         Real(PR), Parameter :: hug = 1._PR/eps
         Real(PR), Dimension(4), Parameter :: lowerBounds = &
@@ -30,28 +30,27 @@ Contains
             & (/ Real(PR) :: hug, hug, hug, hug /)
 
         Real(PR), Intent(In) :: gamma
-        Real(PR), Dimension(4) :: randomU
+        Real(PR), Dimension(4) :: random_U
 
         Real(PR), Dimension(4) :: randomUniform
 
         Real(PR) :: r, u, v, q, p, e
 
         Call RANDOM_NUMBER(randomUniform)
-        randomU = upperBounds * randomUniform + lowerBounds * ( 1._PR - randomUniform )
-        r = randomU(1)
-        u = randomU(2)/r
-        v = randomU(3)/r
-        p = randomU(4)
+        random_U = upperBounds * randomUniform + lowerBounds * ( 1._PR - randomUniform )
+        r = random_U(1)
+        u = random_U(2)/r
+        v = random_U(3)/r
+        p = random_U(4)
         q = .5_PR * ( u**2 + v**2 )
         e = p / (gamma - 1._PR) + r*q
         
-        randomU(4) = e
-    End Function randomU
+        random_U(4) = e
+    End Function random_U
 
-    Subroutine testNumericalFlux(numericalFlux, gamma, fluxF, fluxG)
-        Real(PR), Parameter :: safety_factor = 2._PR
-        Integer, Parameter :: number_of_tests = 1000
-        ! ------------------- Intent In -----------------------
+    Subroutine testFluxnum(numericalFlux, gamma, fluxF, fluxG)
+        Real(PR), Parameter :: tolerance = 1._PR
+        Integer, Parameter  :: number_of_tests = 10000
         Real(PR), Intent(In) :: gamma
         Interface
             Function numericalFlux(axis, UL, UR, gamma)
@@ -84,13 +83,13 @@ Contains
         Logical :: failF, failG
 
         Do i=1, number_of_tests
-            U = randomU(gamma)
-            failF = SUM( ABS(numericalFlux('x', U, U, gamma) - fluxF(U, gamma)) ) > safety_factor*EPSILON(U(1))
-            failG = SUM( ABS(numericalFlux('y', U, U, gamma) - fluxG(U, gamma)) ) > safety_factor*EPSILON(U(1))
+            U = random_U(gamma)
+            failF = SUM( ABS(numericalFlux('x', U, U, gamma) - fluxF(U, gamma)) ) > tolerance*EPSILON(U(1))
+            failG = SUM( ABS(numericalFlux('y', U, U, gamma) - fluxG(U, gamma)) ) > tolerance*EPSILON(U(1))
             If (failF .OR. failG) Then
                 Call Exit(1)
             End If
         End Do
-    End Subroutine testNumericalFlux
+    End Subroutine testFluxnum
 
 End Module mod_test
