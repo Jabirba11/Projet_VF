@@ -3,8 +3,8 @@ xmax 5.0
 ymin -5.0
 ymax 5.0
 
-Nx 200
-Ny 200
+Nx 100
+Ny 100
 
 tmax 10.
 CFL 1
@@ -13,5 +13,5 @@ gamma 1.4
 
 output_modulo 1
 
-flux Rusanov 
+flux WENO3 
 case 2

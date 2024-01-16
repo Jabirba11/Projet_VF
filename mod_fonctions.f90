@@ -133,7 +133,7 @@ Contains
 
         Real(PR), Intent(Out) :: density,velocityX,velocityY,pressure
         
-        density    = 1._PR+0.2_PR*sin(PI*(x+y-Time))
+        density    = 1._PR+0.2_PR*sin(PI*(x+y-Time*(velocityX+velocityY)))
         velocityX  = 1._PR 
         velocityY  = -0.5_PR
         pressure   = 1._PR
